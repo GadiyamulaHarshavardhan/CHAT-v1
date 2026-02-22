@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="ChatApp">
+  <meta name="description" content="Real-time chat application">
+  <link rel="manifest" href="/static/manifest.json">
+  <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
+  <title>Login — ChatApp</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #000;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .login-container {
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* Logo area */
+    .logo-area {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      box-shadow: 0 8px 32px rgba(15, 52, 96, 0.3);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .logo-icon svg {
+      width: 32px;
+      height: 32px;
+      color: #e2e8f0;
+    }
+
+    .logo-area h1 {
+      font-size: 28px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-area p {
+      color: #64748b;
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* Card */
+    .login-card {
+      background: #0a0a0a;
+      border: 1px solid #1a1a1a;
+      border-radius: 20px;
+      padding: 32px 28px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    /* Form group */
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      letter-spacing: 0.3px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 16px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      color: #f1f5f9;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      -webkit-appearance: none;
+    }
+
+    .form-group input:focus {
+      border-color: #334155;
+      box-shadow: 0 0 0 3px rgba(51, 65, 85, 0.2);
+    }
+
+    .form-group input::placeholder {
+      color: #475569;
+    }
+
+    /* Error messages */
+    .error-list {
+      background: rgba(239, 68, 68, 0.08);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+      list-style: none;
+    }
+
+    .error-list li {
+      color: #fca5a5;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* Button */
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      color: #e2e8f0;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.3px;
+    }
+
+    .login-btn:hover {
+      background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+      border-color: #475569;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    /* Footer links */
+    .footer-links {
+      text-align: center;
+      margin-top: 24px;
+    }
+
+    .footer-links a {
+      color: #64748b;
+      font-size: 13px;
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-links a:hover {
+      color: #94a3b8;
+    }
+
+    .footer-links .separator {
+      color: #334155;
+      margin: 0 12px;
+    }
+
+    /* PWA install banner */
+    .pwa-banner {
+      display: none;
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-top: 16px;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .pwa-banner:hover {
+      background: #1e293b;
+    }
+
+    .pwa-banner .pwa-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #1a1a2e, #0f3460);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .pwa-banner .pwa-icon svg {
+      width: 18px;
+      height: 18px;
+      color: #e2e8f0;
+    }
+
+    .pwa-banner .pwa-text {
+      flex: 1;
+    }
+
+    .pwa-banner .pwa-text p {
+      font-size: 13px;
+      font-weight: 500;
+      color: #e2e8f0;
+    }
+
+    .pwa-banner .pwa-text span {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 400px) {
+      .login-card {
+        padding: 24px 20px;
+      }
+      .logo-area h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="login-container">
+    <div class="logo-area">
+      <div class="logo-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </div>
+      <h1>ChatApp</h1>
+      <p>Sign in to continue</p>
+    </div>
+
+    <div class="login-card">
+      {% if form.errors %}
+      <ul class="error-list">
+        {% for field, errors in form.errors.items %}
+          {% for error in errors %}
+            <li>{{ error }}</li>
+          {% endfor %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <form method="post">
+        {% csrf_token %}
+
+        <div class="form-group">
+          <label for="id_username">Username</label>
+          <input id="id_username" name="username" type="text" placeholder="Enter your username" autocomplete="username" required autofocus>
+        </div>
+
+        <div class="form-group">
+          <label for="id_password">Password</label>
+          <input id="id_password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+
+        <button type="submit" class="login-btn">Sign In</button>
+      </form>
+    </div>
+
+    <div class="footer-links">
+      <a href="/admin/">Admin Panel</a>
+      <span class="separator">•</span>
+      <a href="/panel/create-user/">Dashboard</a>
+    </div>
+
+    <!-- PWA Install Banner -->
+    <div class="pwa-banner" id="pwa-banner" onclick="installPWA()">
+      <div class="pwa-icon">
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      </div>
+      <div class="pwa-text">
+        <p>Add to Home Screen</p>
+        <span>Install for quick access</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // PWA Install prompt
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('pwa-banner').style.display = 'flex';
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            document.getElementById('pwa-banner').style.display = 'none';
+          }
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/static/sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
