@@ -296,6 +296,7 @@ Ngrok creates a secure tunnel to expose your local server to the internet:
 | **Can't access microphone/camera** | Use HTTPS (Ngrok) or `localhost` — browsers block media APIs on plain HTTP |
 | **Docker build fails** | Run `docker compose down -v` to clean volumes, then rebuild |
 | **Ngrok not starting** | Make sure you use `--profile ngrok` flag and have a valid `NGROK_AUTHTOKEN` in `.env` |
+| **Ngrok "network not found" error** | This happens on **all OS** (Windows, macOS, Ubuntu/Linux) when Docker has stale networks. Fix: `docker compose --profile ngrok down`, then `docker network prune -f`, then `docker compose --profile ngrok up --build` |
 
 ---
 
