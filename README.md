@@ -72,13 +72,19 @@ Make sure you have these installed:
 ### Step 1: Clone the repository
 
 ```bash
-git clone https://github.com/your-username/chat.git
-cd chat
+git clone https://github.com/GadiyamulaHarshavardhan/CHAT-v1.git
+cd CHAT-v1
 ```
 
 ### Step 2: Create the environment file
 
-Create a `.env` file in the project root (or edit the existing one):
+Copy the example environment file and edit as needed:
+
+```bash
+cp .env.example .env
+```
+
+Or create a `.env` file manually:
 
 ```env
 # Django
@@ -88,8 +94,13 @@ ALLOWED_HOSTS=*
 
 # PostgreSQL
 POSTGRES_DB=chatdb
-POSTGRES_USER=chatuser
-POSTGRES_PASSWORD=chatpass
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=chatpass123
+
+# Default Superuser
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_PASSWORD=admin
+DJANGO_SUPERUSER_EMAIL=admin@example.com
 
 # Ngrok (optional — for public URL access)
 NGROK_AUTHTOKEN=your-ngrok-token
@@ -110,12 +121,28 @@ This will:
 4. Create a default admin user
 5. Start the Daphne ASGI server
 
+**Want public access via Ngrok?** Use the ngrok profile:
+
+```bash
+docker compose --profile ngrok up --build
+```
+
 ### Step 4: Open the app
 
 Open your browser and go to:
 
 ```
 http://localhost:8000
+```
+
+If running with Ngrok, get your public URL:
+
+```bash
+# Via Ngrok Dashboard
+http://localhost:4040
+
+# Or via API
+curl http://localhost:4040/api/tunnels
 ```
 
 ### Step 5: Log in
@@ -171,7 +198,7 @@ Replace `general`, `team`, or `random` with any room name you like.
 ## 📁 Project Structure
 
 ```
-chat/
+CHAT-v1/
 ├── chatapp/                  # Main Django app
 │   ├── consumers.py          # WebSocket handlers
 │   ├── models.py             # Database models
@@ -196,7 +223,8 @@ chat/
 ├── Dockerfile                # App container
 ├── entrypoint.sh             # Container startup script
 ├── requirements.txt          # Python dependencies
-└── .env                      # Environment variables
+├── .env.example              # Example environment file
+└── .env                      # Your local environment variables
 ```
 
 ---
@@ -204,17 +232,24 @@ chat/
 ## 🔧 Common Commands
 
 ```bash
-# Start all services
+# Start all services (local only)
 docker compose up --build
 
-# Start in background
+# Start with Ngrok (public access)
+docker compose --profile ngrok up --build
+
+# Start in background (detached)
 docker compose up --build -d
 
 # Stop all services
 docker compose down
 
+# Stop and remove volumes (fresh start)
+docker compose down -v
+
 # View logs
 docker compose logs -f web
+docker compose logs ngrok
 
 # Open a Django shell
 docker compose exec web python manage.py shell
@@ -230,15 +265,24 @@ docker compose exec web python manage.py migrate
 
 ## 🌐 Public Access with Ngrok
 
-The project includes Ngrok for exposing your local server to the internet:
+Ngrok creates a secure tunnel to expose your local server to the internet:
 
 1. Sign up at [ngrok.com](https://ngrok.com) and get your auth token
-2. Add it to `.env`: `NGROK_AUTHTOKEN=your-token`
-3. Restart: `docker compose up --build`
-4. Check the Ngrok container logs for your public URL:
-   ```bash
-   docker compose logs ngrok
+2. Add it to `.env`:
    ```
+   NGROK_AUTHTOKEN=your-token-here
+   ```
+3. Start with the ngrok profile:
+   ```bash
+   docker compose --profile ngrok up --build
+   ```
+4. Get your public URL from the Ngrok dashboard:
+   ```
+   http://localhost:4040
+   ```
+5. Share the `https://xxxx-xx-xx-xxx-xxx.ngrok-free.app` URL with anyone!
+
+> **Note:** Ngrok is configured as an optional Docker Compose profile. It won't start with regular `docker compose up` — you must include `--profile ngrok`.
 
 ---
 
@@ -251,6 +295,7 @@ The project includes Ngrok for exposing your local server to the internet:
 | **WebSocket won't connect** | Make sure you're using `http://localhost:8000`, not `127.0.0.1` (must match `ALLOWED_HOSTS`) |
 | **Can't access microphone/camera** | Use HTTPS (Ngrok) or `localhost` — browsers block media APIs on plain HTTP |
 | **Docker build fails** | Run `docker compose down -v` to clean volumes, then rebuild |
+| **Ngrok not starting** | Make sure you use `--profile ngrok` flag and have a valid `NGROK_AUTHTOKEN` in `.env` |
 
 ---
 

@@ -134,15 +134,45 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         if message or attachments:
             reply_to = data.get("reply_to", None)
+            msg = await self._save_message(sender, self.room_name, message, attachments)
             await self.channel_layer.group_send(self.group_name, {
                 "type": "chat.message",
                 "message": message,
                 "username": sender,
                 "attachments": attachments,
-                "reply_to": reply_to
+                "reply_to": reply_to,
+                "message_id": msg.id if msg else None
             })
+            return
 
-            await self._save_message(sender, self.room_name, message, attachments)
+        # ------------------------------
+        # 4. EDIT MESSAGE
+        # ------------------------------
+        if data.get("type") == "edit_message":
+            msg_id = data.get("message_id")
+            new_content = data.get("content", "")
+            success = await self._edit_message(msg_id, sender, new_content)
+            if success:
+                await self.channel_layer.group_send(self.group_name, {
+                    "type": "edit.event",
+                    "message_id": msg_id,
+                    "content": new_content,
+                    "username": sender
+                })
+            return
+
+        # ------------------------------
+        # 5. DELETE MESSAGE
+        # ------------------------------
+        if data.get("type") == "delete_message":
+            msg_id = data.get("message_id")
+            success = await self._delete_message(msg_id, sender)
+            if success:
+                await self.channel_layer.group_send(self.group_name, {
+                    "type": "delete.event",
+                    "message_id": msg_id,
+                    "username": sender
+                })
             return
 
     # ---------------------------------------
@@ -179,11 +209,33 @@ class ChatConsumer(AsyncWebsocketConsumer):
         payload = {
             "message": event.get("message", ""),
             "username": event.get("username"),
-            "attachments": event.get("attachments", [])
+            "attachments": event.get("attachments", []),
+            "message_id": event.get("message_id")
         }
         if event.get("reply_to"):
             payload["reply_to"] = event["reply_to"]
         await self.send_json(payload)
+
+    # ---------------------------------------
+    # EDIT EVENT
+    # ---------------------------------------
+    async def edit_event(self, event):
+        await self.send_json({
+            "type": "message_edited",
+            "message_id": event["message_id"],
+            "content": event["content"],
+            "username": event["username"]
+        })
+
+    # ---------------------------------------
+    # DELETE EVENT
+    # ---------------------------------------
+    async def delete_event(self, event):
+        await self.send_json({
+            "type": "message_deleted",
+            "message_id": event["message_id"],
+            "username": event["username"]
+        })
 
     # ---------------------------------------
     # SAVE TO DATABASE
@@ -212,6 +264,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
 
         return msg
+
+    @database_sync_to_async
+    def _edit_message(self, message_id, username, new_content):
+        try:
+            msg = Message.objects.get(id=message_id, user__username=username)
+            msg.content = new_content
+            msg.save(update_fields=["content"])
+            return True
+        except Message.DoesNotExist:
+            return False
+
+    @database_sync_to_async
+    def _delete_message(self, message_id, username):
+        try:
+            msg = Message.objects.get(id=message_id, user__username=username)
+            msg.delete()
+            return True
+        except Message.DoesNotExist:
+            return False
 
     # Utility
     async def send_json(self, obj):

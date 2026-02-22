@@ -533,6 +533,66 @@
       text-overflow: ellipsis;
       max-width: 200px;
     }
+
+    /* Message context menu (edit/delete) */
+    .msg-actions {
+      display: none;
+      position: absolute;
+      top: -32px;
+      right: 0;
+      background: #1C1C1E;
+      border: 1px solid #2C2C2E;
+      border-radius: 10px;
+      padding: 4px;
+      gap: 2px;
+      z-index: 10;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    .msg-actions.left {
+      right: auto;
+      left: 0;
+    }
+
+    .msg-bubble-wrap:hover .msg-actions {
+      display: flex;
+    }
+
+    .msg-actions button {
+      background: none;
+      border: none;
+      padding: 4px 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #8E8E93;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+
+    .msg-actions button:hover {
+      background: #2C2C2E;
+      color: #fff;
+    }
+
+    .msg-actions .delete-btn:hover {
+      color: #FF453A;
+    }
+
+    .msg-deleted {
+      font-style: italic;
+      color: #636366 !important;
+      opacity: 0.6;
+    }
+
+    .msg-edited-tag {
+      font-size: 10px;
+      color: #636366;
+      font-style: italic;
+    }
   </style>
 </head>
 
@@ -726,9 +786,10 @@
   <!-- CHAT MESSAGES CONTAINER -->
   <main id="messages" style="flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:4px">
     {% for m in messages %}
-    <div class="message-animation"
+    <div class="message-animation" data-msg-id="{{ m.id }}" data-username="{{ m.user.username }}"
+      data-text="{{ m.content|default:'' }}"
       style="display:flex;{% if m.user.username == request.user.username %}justify-content:flex-end{% else %}justify-content:flex-start{% endif %}">
-      <div style="max-width:78%">
+      <div style="max-width:78%;position:relative" class="msg-bubble-wrap">
         {% if m.user.username != request.user.username %}
         <p style="font-size:11px;color:#8E8E93;margin-bottom:2px;margin-left:4px">{{ m.user.username }}</p>
         {% endif %}
@@ -774,9 +835,46 @@
           {% endfor %}
           {% endif %}
         </div>
-        <p
-          style="font-size:10px;color:#636366;margin-top:2px;{% if m.user.username == request.user.username %}text-align:right{% endif %};padding:0 4px">
-          {{ m.timestamp|time:"g:i A" }}</p>
+        <div
+          style="display:flex;align-items:center;gap:4px;margin-top:2px;{% if m.user.username == request.user.username %}justify-content:flex-end{% endif %};padding:0 4px">
+          <p style="font-size:10px;color:#636366">{{ m.timestamp|time:"g:i A" }}</p>
+          <button onclick="setReply('{{ m.user.username }}', '{{ m.content|escapejs }}')"
+            style="background:none;border:none;cursor:pointer;padding:2px;opacity:0;transition:opacity 0.15s"
+            class="reply-btn">
+            <svg width="14" height="14" fill="none" stroke="#636366" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 10h10a5 5 0 015 5v6M3 10l6 6M3 10l6-6" />
+            </svg>
+          </button>
+        </div>
+        {% if m.user.username == request.user.username %}
+        <div class="msg-actions">
+          <button onclick="startEditMessage({{ m.id }}, this)" title="Edit">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+            Edit
+          </button>
+          <button class="delete-btn" onclick="deleteMessage({{ m.id }})" title="Delete">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete
+          </button>
+        </div>
+        {% else %}
+        <div class="msg-actions left">
+          <button onclick="setReply('{{ m.user.username }}', '{{ m.content|escapejs }}')" title="Reply">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M3 10h10a5 5 0 015 5v6M3 10l6 6M3 10l6-6" />
+            </svg>
+            Reply
+          </button>
+        </div>
+        {% endif %}
       </div>
     </div>
     {% endfor %}
@@ -1151,7 +1249,7 @@
           CHAT MESSAGE DISPLAY
     ------------------------------ */
 
-    function displayChatMessage(username, message, isCurrentUser = false, attachments = [], replyTo = null) {
+    function displayChatMessage(username, message, isCurrentUser = false, attachments = [], replyTo = null, messageId = null) {
       const messagesContainer = document.getElementById("messages");
       const isMe = username === CURRENT_USER || isCurrentUser;
 
@@ -1160,6 +1258,7 @@
       messageDiv.style.cssText = `display:flex;${isMe ? 'justify-content:flex-end' : 'justify-content:flex-start'}`;
       messageDiv.setAttribute('data-username', username);
       messageDiv.setAttribute('data-text', message || '');
+      if (messageId) messageDiv.setAttribute('data-msg-id', messageId);
 
       let attachmentsHTML = '';
       if (attachments && attachments.length > 0) {
@@ -1183,6 +1282,29 @@
       const safeMsg = message ? escapeHTML(message) : '';
       const safeUser = escapeHTML(username);
 
+      let actionsHTML = '';
+      if (isMe && messageId) {
+        actionsHTML = `
+          <div class="msg-actions">
+            <button onclick="startEditMessage(${messageId}, this)" title="Edit">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+              Edit
+            </button>
+            <button class="delete-btn" onclick="deleteMessage(${messageId})" title="Delete">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              Delete
+            </button>
+          </div>`;
+      } else if (!isMe) {
+        actionsHTML = `
+          <div class="msg-actions left">
+            <button onclick="setReply('${safeUser}', '${safeMsg.replace(/'/g, "\\\'")}')" title="Reply">
+              <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v6M3 10l6 6M3 10l6-6"/></svg>
+              Reply
+            </button>
+          </div>`;
+      }
+
       messageDiv.innerHTML = `
         <div style="max-width:78%;position:relative" class="msg-bubble-wrap">
           ${!isMe ? `<p style="font-size:11px;color:#8E8E93;margin-bottom:2px;margin-left:4px">${safeUser}</p>` : ''}
@@ -1193,11 +1315,11 @@
           </div>
           <div style="display:flex;align-items:center;gap:4px;margin-top:2px;${isMe ? 'justify-content:flex-end' : ''};padding:0 4px">
             <p style="font-size:10px;color:#636366">${timeStr}</p>
-            <button onclick="setReply('${safeUser}', '${safeMsg.replace(/'/g, "\\'")}')"
-              style="background:none;border:none;cursor:pointer;padding:2px;opacity:0;transition:opacity 0.15s" class="reply-btn">
+            <button onclick="setReply('${safeUser}', '${safeMsg.replace(/'/g, "\\\'")}')" style="background:none;border:none;cursor:pointer;padding:2px;opacity:0;transition:opacity 0.15s" class="reply-btn">
               <svg width="14" height="14" fill="none" stroke="#636366" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a5 5 0 015 5v6M3 10l6 6M3 10l6-6"/></svg>
             </button>
           </div>
+          ${actionsHTML}
         </div>
       `;
 
@@ -1327,11 +1449,23 @@
 
       /* Normal chat message with attachments */
       if (data.message || data.attachments) {
-        displayChatMessage(data.username, data.message, data.username === CURRENT_USER, data.attachments, data.reply_to || null);
+        displayChatMessage(data.username, data.message, data.username === CURRENT_USER, data.attachments, data.reply_to || null, data.message_id || null);
         // Push notification if tab is hidden
         if (document.hidden && data.username !== CURRENT_USER && Notification.permission === 'granted') {
           new Notification(data.username, { body: data.message || 'Sent an attachment', icon: '/static/icons/icon-192.png' });
         }
+      }
+
+      /* Message edited */
+      if (data.type === 'message_edited') {
+        handleEditedMessage(data.message_id, data.content);
+        return;
+      }
+
+      /* Message deleted */
+      if (data.type === 'message_deleted') {
+        handleDeletedMessage(data.message_id);
+        return;
       }
     };
 
@@ -2595,6 +2729,89 @@
         Notification.requestPermission();
         document.removeEventListener('click', requestNotifPerm);
       }, { once: true });
+    }
+
+    /* ------------------------------
+         EDIT / DELETE MESSAGES
+    ------------------------------ */
+
+    function startEditMessage(msgId, btnEl) {
+      const msgDiv = document.querySelector(`[data-msg-id="${msgId}"]`);
+      if (!msgDiv) return;
+      const bubble = msgDiv.querySelector('.bubble-sent, .bubble-received');
+      if (!bubble) return;
+      const pEl = bubble.querySelector('p');
+      if (!pEl) return;
+
+      const oldText = pEl.textContent;
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = oldText;
+      input.style.cssText = 'width:100%;background:#2C2C2E;border:1px solid #3A3A3C;border-radius:8px;padding:6px 10px;color:#fff;font-size:inherit;font-family:inherit;outline:none;';
+
+      pEl.replaceWith(input);
+      input.focus();
+      input.select();
+
+      function finishEdit() {
+        const newText = input.value.trim();
+        if (newText && newText !== oldText) {
+          const ws = currentSocket || socket;
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'edit_message', message_id: msgId, content: newText }));
+          }
+        }
+        // Restore the <p> regardless
+        const newP = document.createElement('p');
+        newP.textContent = newText || oldText;
+        input.replaceWith(newP);
+      }
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); finishEdit(); }
+        if (e.key === 'Escape') { const p = document.createElement('p'); p.textContent = oldText; input.replaceWith(p); }
+      });
+      input.addEventListener('blur', finishEdit);
+    }
+
+    function deleteMessage(msgId) {
+      if (!confirm('Delete this message?')) return;
+      const ws = currentSocket || socket;
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'delete_message', message_id: msgId }));
+      }
+    }
+
+    function handleEditedMessage(msgId, newContent) {
+      const msgDiv = document.querySelector(`[data-msg-id="${msgId}"]`);
+      if (!msgDiv) return;
+      const bubble = msgDiv.querySelector('.bubble-sent, .bubble-received');
+      if (!bubble) return;
+      const pEl = bubble.querySelector('p');
+      if (pEl) {
+        pEl.textContent = newContent;
+      }
+      // Add (edited) tag if not already there
+      if (!msgDiv.querySelector('.msg-edited-tag')) {
+        const tag = document.createElement('span');
+        tag.className = 'msg-edited-tag';
+        tag.textContent = ' (edited)';
+        const timeRow = msgDiv.querySelector('div[style*="display:flex"] > p');
+        if (timeRow) timeRow.insertAdjacentElement('afterend', tag);
+      }
+      msgDiv.setAttribute('data-text', newContent);
+    }
+
+    function handleDeletedMessage(msgId) {
+      const msgDiv = document.querySelector(`[data-msg-id="${msgId}"]`);
+      if (!msgDiv) return;
+      const bubble = msgDiv.querySelector('.bubble-sent, .bubble-received');
+      if (!bubble) return;
+      bubble.innerHTML = '<p class="msg-deleted">This message was deleted</p>';
+      // Remove action buttons
+      const actions = msgDiv.querySelector('.msg-actions');
+      if (actions) actions.remove();
+      msgDiv.setAttribute('data-text', '');
     }
 
   </script>
